@@ -141,7 +141,7 @@ func courseHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		course = &updateCourse
-		
+
 		//  ทำหน้าที่แทนที่ข้อมูลของคอร์สที่อยู่ใน CourseList ที่ตำแหน่ง listItemIndex 
 		// ด้วยข้อมูลใหม่ที่ได้จากการอัปเดต (ที่เก็บไว้ในตัวแปร course).
 		CourseList[listItemIndex] = *course
@@ -164,6 +164,7 @@ func coursesHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		w.Header().Set("Content-Type", "application/json")
+		w.Header().Set("Access-Control-Allow-Origin", "*")
 		w.Write(courseJSON)
 	
 	// case post
@@ -190,8 +191,63 @@ func coursesHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// middle ware
+func middlewareHandler(handler http.Handler)http.Handler{
+	return http.HandlerFunc(
+		func (w http.ResponseWriter, r *http.Request) {
+			// กระบวนการทำงานที่ต้องการทำก่อนที่จะส่ง request ไปยัง handler ที่ถูกส่งเข้ามา
+			fmt.Println("before handler middle start")
+			// ส่ง request ไปยัง handler
+
+			// w= respon, r=request
+			// ใช้เพื่อคั่นกลางการทำงานของ middle ware 2 ตัว (courseHandler, coursesHandler)
+			handler.ServeHTTP(w, r)
+
+			// กระบวนการทำงานที่ต้องการทำหลังจากที่ handler ทำงานเสร็จสิ้น
+			fmt.Println("middle ware finish")
+		},
+	)
+}
+
+// Cors
+// ที่ใช้สำหรับการกำหนดค่า CORS (Cross-Origin Resource Sharing) ในแอปพลิเคชัน Go. CORS ช่วยให้เบราว์เซอร์อนุญาตให้แอปพลิเคชันที่อยู่ใน
+// โดเมนต่างกัน (origin) ใช้งาน API ของแอปพลิเคชันนี้ได้.
+// func enableCorsMiddleware(handler http.Handler) http.Handler {
+// 	return http.HandlerFunc(func (w http.ResponseWriter, r *http.Request) {
+
+// 		// "Access-Control-Allow-Origin": บอกให้เบราว์เซอร์ทุกตัวที่อยู่ในโดเมนอื่น (ไม่ใช่ origin ต้นทาง) ให้สามารถเข้าถึง API นี้ได้ (* หมายถึงอนุญาตทุกๆ origin).
+// 		w.Header().Add("Access-Control-Allow-Origin", "*")
+
+// 		// "Access-Control-Allow-Methods": ระบุ HTTP methods ที่ได้รับอนุญาตจากเบราว์เซอร์. ในที่นี้คือ POST, GET, OPTION, PUT, DELETE.
+// 		w.Header().Add("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
+
+// 		// "Access-Control-Allow-Headers": ระบุชื่อของ HTTP headers ที่ได้รับอนุญาตจากเบราว์เซอร์. ในที่นี้คือ "Access", "Content-Type", "Contain-Length", "Authorization".
+// 		w.Header().Add("Access-Control-Allow-Headers", "Accept, Content-Type, Content-Length, Authorization, X-Requested-With")
+		
+
+//         handler.ServeHTTP(w, r)
+// 	})
+// }
+func enableCorsMiddleware(handler http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// "Access-Control-Allow-Origin": Allow all origins to access the API (* means any origin).
+		w.Header().Add("Access-Control-Allow-Origin", "*")
+
+		// "Access-Control-Allow-Methods": Specify HTTP methods allowed by the browser. Here it is POST, GET, OPTIONS, PUT, DELETE.
+		w.Header().Add("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
+
+		// "Access-Control-Allow-Headers": Specify the names of allowed headers. In this case, "Accept", "Content-Type", "Content-Length", "Authorization", "X-Requested-With".
+		w.Header().Add("Access-Control-Allow-Headers", "Accept, Content-Type, Content-Length, Authorization, X-Content-Type-Options,Origin")
+
+		handler.ServeHTTP(w, r)
+	})
+}
+
+
 func main() {
-	http.HandleFunc("/course/", courseHandler)
-	http.HandleFunc("/course", coursesHandler)
+	coursrItemHandler := http.HandlerFunc(courseHandler)
+	courseListHandler := http.HandlerFunc(coursesHandler)
+	http.Handle("/course/", enableCorsMiddleware(coursrItemHandler))
+	http.Handle("/course", enableCorsMiddleware(courseListHandler))
 	http.ListenAndServe(":5000", nil)
 }
