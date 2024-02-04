@@ -237,7 +237,9 @@ func enableCorsMiddleware(handler http.Handler) http.Handler {
 		w.Header().Add("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
 
 		// "Access-Control-Allow-Headers": Specify the names of allowed headers. In this case, "Accept", "Content-Type", "Content-Length", "Authorization", "X-Requested-With".
-		w.Header().Add("Access-Control-Allow-Headers", "Accept, Content-Type, Content-Length, Authorization, X-Content-Type-Options,Origin")
+		w.Header().Add("Access-Control-Allow-Headers", "Accept, Content-Type, Content-Length, Authorization, X-CSRF-Token, Accept-Encoding")
+
+		// w.Header().Set("ngrok-skip-browser-warning", "69420")
 
 		handler.ServeHTTP(w, r)
 	})
